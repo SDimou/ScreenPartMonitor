@@ -14,8 +14,10 @@ import threading
 import time
 import variables as var
 
-# Path to the MP3 file to play
-mp3_file_path = var.mp3_file_path
+# Path to the MP3 files to play
+mp3_all_file_path = var.mp3_all_file_path
+thalasses_mp3_path = var.thalasses_mp3_path
+greek_gale_mp3_path = var.greek_gale_mp3_path
 
 overlay_root = None
 overlay_visible = False
@@ -88,10 +90,10 @@ def compare_images(img1, img2):
     gray = cv2.cvtColor(difference, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
     count = cv2.countNonZero(thresh)
-    return count > 0  # True if there's a difference
+    return count == 0  # True if there the same
 
 
-def alert():
+def alert(mp3_file_path):
     """Play an alert sound and show a popup message."""
     # Play an MP3 file
     pygame.init()
@@ -100,8 +102,6 @@ def alert():
     while pygame.mixer.music.get_busy():  # Wait for the music to finish playing
         pygame.time.Clock().tick(10)
     pygame.quit()
-    # Schedule the messagebox to be shown in the main thread
-    # main_thread_tk.after(0, show_messagebox)
 
 
 def show_messagebox():
@@ -127,9 +127,6 @@ def create_system_tray_icon():
         icon_image = Image.open(var.icon_path)
         menu = pystray.Menu(
             pystray.MenuItem(
-                "Εμφάνιση/Απόκρυψη Περιοχής Ελέγχου", lambda: toggle_overlay()
-            ),
-            pystray.MenuItem(
                 "Εμφάνιση/Απόκρυψη Παραθύρου Κονσόλας", lambda: toggle_console_window()
             ),
             pystray.MenuItem("Έξοδος", exit_program),
@@ -153,14 +150,10 @@ def monitor_screen():
     # Specify the screen region to capture (x, y, width, height)
     region = var.region  # Adjust this to your needs
 
-    # Path to save the reference image
-    reference_image_path = var.reference_image_path
-
-    # Create and save the initial reference image
-    screenshot = pyautogui.screenshot(region=region)
-    reference_image = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-    cv2.imwrite(reference_image_path, reference_image)
-    # reference_image = cv2.imread(reference_image_path)
+    # Load the reference images
+    reference_image = cv2.imread(var.reference_image_path)
+    reference_image_9 = cv2.imread(var.reference9_image_path)
+    reference_image_4 = cv2.imread(var.reference4_image_path)
 
     while True:
         # Capture the specified region of the screen
@@ -170,10 +163,15 @@ def monitor_screen():
         cv2.imwrite(var.current_image_path, screen_image)
 
         # Compare the screenshot with the reference image
-        if compare_images(screen_image, reference_image):
-            alert()
-            # Snooze detection for 15 minutes
-            time.sleep(15 * 60)  # Sleep for 15 minutes (in seconds)
+        if not compare_images(screen_image, reference_image):
+            if compare_images(screen_image, reference_image_9):
+                alert(thalasses_mp3_path)
+                time.sleep(10 * 60)  # Sleep for 10 minutes (in seconds)
+            elif compare_images(screen_image, reference_image_4):
+                alert(greek_gale_mp3_path)
+                time.sleep(5 * 60)  # Sleep for 5 minutes (in seconds)
+            else:
+                alert(mp3_all_file_path)
 
         # Add a delay between consecutive checks (adjust as needed)
         time.sleep(10)  # Check every 10 seconds
